@@ -37,7 +37,8 @@ def fetch_details(url, headers, retries=5, backoff_factor=1):
     return None
 
 # Read ISINs from Excel
-isin_file_path = r"C:\Users\Premkumar.8265\Desktop\nsdl_bond\List_of_securitites_active_matured.xlsx"
+# isin_file_path = r"C:\Users\Premkumar.8265\Desktop\nsdl_bond\List_of_securitites_active_matured.xlsx"
+isin_file_path = r"C:\Users\Premkumar.8265\Desktop\all_projects_new\nsdl_incremental_also_api_code\nsdl_bond_incremental_personal\deleted_isins.xlsx"
 isin_df = pd.read_excel(isin_file_path)
 
 # Ensure ISIN column exists
@@ -46,7 +47,7 @@ if 'ISIN' not in isin_df.columns:
     sys.exit(1)
 
 # Limit to the first 10 rows
-isin_df = isin_df.head(10)
+# isin_df = isin_df.head()
 
 # Headers for requests
 headers = {
@@ -64,6 +65,7 @@ for isin in isin_df['ISIN']:
         print(f"Processing ISIN: {isin}")
         
         # URLs to fetch details
+        issuer_details_url = f"https://www.indiabondinfo.nsdl.com/bds-service/v1/public/isins?isin={isin}"
         instrument_details_url = f"https://www.indiabondinfo.nsdl.com/bds-service/v1/public/bdsinfo/instruments?isin={isin}"
         coupondetail_url =        f"https://www.indiabondinfo.nsdl.com/bds-service/v1/public/bdsinfo/coupondetail?isin={isin}"
         redemptions_url =        f"https://www.indiabondinfo.nsdl.com/bds-service/v1/public/bdsinfo/redemptions?isin={isin}"
@@ -81,9 +83,9 @@ for isin in isin_df['ISIN']:
         keydocuments_url = f"https://www.indiabondinfo.nsdl.com/bds-service/v1/public/bdsinfo/keydocuments?isin={isin}"
 
         # Fetch instrument details
+        issuer_details = fetch_details(issuer_details_url, headers)
         instrument_details = fetch_details(instrument_details_url, headers)
         
-
         coupondetail = fetch_details(coupondetail_url, headers)
         redemptions = fetch_details(redemptions_url, headers)
         credit_ratings = fetch_details(credit_ratings_url, headers)
@@ -116,7 +118,9 @@ for isin in isin_df['ISIN']:
         result_df = pd.DataFrame(results)
 
         # Save the DataFrame to an Excel file
-        output_file_path = r"C:\Users\Premkumar.8265\Desktop\nsdl_bond\List_of_securitites_active_matured_results.xlsx"
+        # output_file_path = r"C:\Users\Premkumar.8265\Desktop\nsdl_bond\List_of_securitites_active_matured_results.xlsx"
+
+        output_file_path = r"C:\Users\Premkumar.8265\Desktop\all_projects_new\nsdl_incremental_also_api_code\nsdl_bond_incremental_personal\deleted_results.xlsx"
         result_df.to_excel(output_file_path, index=False)
         print(f"Data saved to {output_file_path}")  
                     
@@ -167,6 +171,7 @@ from requests.exceptions import ConnectionError, Timeout
 import time
 
 # Function to fetch details with retries and exponential backoff
+
 def fetch_details(url, headers, retries=5, backoff_factor=1):
     attempt = 0
     while attempt < retries:
@@ -196,95 +201,98 @@ def fetch_details(url, headers, retries=5, backoff_factor=1):
     print("All attempts failed")
     return None
 
-# Read ISINs from Excel
-isin_file_path = r"C:\Users\Premkumar.8265\Desktop\nsdl_bond\List_of_isin.xlsx"
-
-isin_df = pd.read_excel(isin_file_path)
-
-# Ensure ISIN column exists
-if 'ISIN' not in isin_df.columns:
-    print("ISIN column not found in the provided Excel file.")
-    sys.exit(1)
-
-# Headers for requests
-headers = {
-    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
-    'Accept': 'application/json',
-    'Referer': 'https://www.indiabondinfo.nsdl.com/',
-    'Origin': 'https://www.indiabondinfo.nsdl.com'
-}
-
-# Load existing output file
-output_file_path = r"C:\Users\Premkumar.8265\Desktop\nsdl_bond\instrument_details_update_active.xlsx"
 try:
-    existing_result_df = pd.read_excel(output_file_path)
-except FileNotFoundError:
-    existing_result_df = pd.DataFrame()
-
-# Get the list of existing ISINs and remaining ISINs
-# input_isins = isin_df['ISIN'].tolist()
-# existing_isins = existing_result_df['ISIN'].tolist()
-# remaining_isins = [isin for isin in input_isins if isin not in existing_isins]
-# remaining_isin_df = isin_df[isin_df['ISIN'].isin(remaining_isins)]
-
-# DataFrame to store results
-results = []
-
-# for isin in remaining_isin_df['ISIN']:
-#     try:
-#         print(f"Processing ISIN: {isin}")
         
-        # # URLs to fetch details
-        # instrument_details_url = f"https://www.indiabondinfo.nsdl.com/bds-service/v1/public/bdsinfo/instruments?isin={isin}"
-        # keydocuments_url = f"https://www.indiabondinfo.nsdl.com/bds-service/v1/public/bdsinfo/keydocuments?isin={isin}"
+    # Read ISINs from Excel
+    isin_file_path = r"C:\Users\Premkumar.8265\Desktop\nsdl_bond\List_of_isin.xlsx"
 
-        # # Fetch instrument details
+    isin_df = pd.read_excel(isin_file_path)
 
-        # instrument_details = fetch_details(instrument_details_url, headers)
-        
-        # # Fetch key documents
-        # keydocuments = fetch_details(keydocuments_url, headers)
-        
-        # Append the results
-        # results.append({
-        #     'ISIN': isin,
-        #     'instrument_details': str(instrument_details) if instrument_details else None,
+    # Ensure ISIN column exists
+    if 'ISIN' not in isin_df.columns:
+        print("ISIN column not found in the provided Excel file.")
+        sys.exit(1)
+
+    # Headers for requests
+    headers = {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
+        'Accept': 'application/json',
+        'Referer': 'https://www.indiabondinfo.nsdl.com/',
+        'Origin': 'https://www.indiabondinfo.nsdl.com'
+    }
+
+    # Load existing output file
+    output_file_path = r"C:\Users\Premkumar.8265\Desktop\nsdl_bond\instrument_details_update_active.xlsx"
+    try:
+        existing_result_df = pd.read_excel(output_file_path)
+    except FileNotFoundError:
+        existing_result_df = pd.DataFrame()
+
+    # Get the list of existing ISINs and remaining ISINs
+    # input_isins = isin_df['ISIN'].tolist()
+    # existing_isins = existing_result_df['ISIN'].tolist()
+    # remaining_isins = [isin for isin in input_isins if isin not in existing_isins]
+    # remaining_isin_df = isin_df[isin_df['ISIN'].isin(remaining_isins)]
+
+    # DataFrame to store results
+    results = []
+
+    # for isin in remaining_isin_df['ISIN']:
+    #     try:
+    #         print(f"Processing ISIN: {isin}")
             
-        #     'keydocuments': str(keydocuments) if keydocuments else None
-        # })
+            # # URLs to fetch details
+            # instrument_details_url = f"https://www.indiabondinfo.nsdl.com/bds-service/v1/public/bdsinfo/instruments?isin={isin}"
+            # keydocuments_url = f"https://www.indiabondinfo.nsdl.com/bds-service/v1/public/bdsinfo/keydocuments?isin={isin}"
+
+            # # Fetch instrument details
+
+            # instrument_details = fetch_details(instrument_details_url, headers)
+            
+            # # Fetch key documents
+            # keydocuments = fetch_details(keydocuments_url, headers)
+            
+            # Append the results
+            # results.append({
+            #     'ISIN': isin,
+            #     'instrument_details': str(instrument_details) if instrument_details else None,
+                
+            #     'keydocuments': str(keydocuments) if keydocuments else None
+            # })
+            
+        #     # Create DataFrame from new results
+        #     new_result_df = pd.DataFrame(results)
+
+        #     # Combine existing and new results
+        #     final_result_df = pd.concat([existing_result_df, new_result_df], ignore_index=True)
+
+        #     # Save the final DataFrame to the output file
+        #     final_result_df.to_excel(output_file_path, index=False)
+        #     print(f"Data saved to {output_file_path}")
         
-    #     # Create DataFrame from new results
-    #     new_result_df = pd.DataFrame(results)
-
-    #     # Combine existing and new results
-    #     final_result_df = pd.concat([existing_result_df, new_result_df], ignore_index=True)
-
-    #     # Save the final DataFrame to the output file
-    #     final_result_df.to_excel(output_file_path, index=False)
-    #     print(f"Data saved to {output_file_path}")
-    
-    # except Exception as e:
-    #     exc_type, exc_obj, exc_tb = sys.exc_info()
-    #     print(f"Error occurred for ISIN {isin} at line {exc_tb.tb_lineno}:")
-    #     print(f"Exception Type: {exc_type}")
-    #     print(f"Exception Object: {exc_obj}")
-    #     print(f"Traceback: {exc_tb}")
+        # except Exception as e:
+        #     exc_type, exc_obj, exc_tb = sys.exc_info()
+        #     print(f"Error occurred for ISIN {isin} at line {exc_tb.tb_lineno}:")
+        #     print(f"Exception Type: {exc_type}")
+        #     print(f"Exception Object: {exc_obj}")
+        #     print(f"Traceback: {exc_tb}")
 
 
 
-# # Validation step to ensure all ISINs are saved
-input_isins = set(isin_df['ISIN'])
-output_isins = set(existing_result_df['ISIN'])
+    # # Validation step to ensure all ISINs are saved
+    input_isins = set(isin_df['ISIN'])
+    output_isins = set(existing_result_df['ISIN'])
 
-missing_isins = input_isins - output_isins
+    missing_isins = input_isins - output_isins
 
-if missing_isins:
-    print(f"Missing ISINs in the output file: {missing_isins}")
-else:
-    print("All ISINs from the input file are stored in the output file.")
+    if missing_isins:
+        print(f"Missing ISINs in the output file: {missing_isins}")
+    else:
+        print("All ISINs from the input file are stored in the output file.")
 
 
-
+except:
+    pass
 
 
 

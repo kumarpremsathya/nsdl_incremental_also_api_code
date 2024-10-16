@@ -7,6 +7,7 @@ from requests.exceptions import ConnectionError, Timeout
 import time
 import json
 from deepdiff import DeepDiff
+import ast
 
 # Function to fetch details with retries and exponential backoff
 def fetch_details(url, headers, retries=7, backoff_factor=1):
@@ -154,16 +155,35 @@ def fetch_existing_data_for_isin(connection, isin):
 #     except json.JSONDecodeError:
 #         return json_string
     
-    
 
-import ast
+def custom_compare_data(existing, new):
+    changes = {}
+    for key in set(existing.keys()) | set(new.keys()):
+        if existing.get(key) != new.get(key):
+            changes[key] = {
+                'old': existing.get(key),
+                'new': new.get(key)
+            }
+    return changes if changes else None
 
 
-def compare_data(existing, new):
+
+def compare_data(existing, new, column_name):
     try:
         # Convert string representations of dictionaries to actual dictionaries
         existing_obj = ast.literal_eval(existing) if existing else {}
         new_obj = ast.literal_eval(new) if new else {}
+        
+
+        if column_name == 'issuer_details':
+            # Use custom comparison for issuer_details
+            changes = custom_compare_data(existing_obj, new_obj)
+            if changes:
+                print(f"Relevant Changes found in {column_name}:", changes)
+                return changes
+            else:
+                print(f"No changes found in {column_name}")
+                return None
 
         # Perform a deep comparison
         diff = DeepDiff(existing_obj, new_obj,
@@ -172,6 +192,8 @@ def compare_data(existing, new):
                         ignore_string_type_changes=True,
                         ignore_numeric_type_changes=True,
                         ignore_type_in_groups=[(str, int, float)])
+        
+        
 
         # Filter out unwanted changes
         relevant_changes = {}
@@ -181,6 +203,7 @@ def compare_data(existing, new):
             relevant_changes['dictionary_item_added'] = diff['dictionary_item_added']
         if 'dictionary_item_removed' in diff:
             relevant_changes['dictionary_item_removed'] = diff['dictionary_item_removed']
+
         
         if relevant_changes:
             print("Relevant changes found:", relevant_changes)
@@ -197,6 +220,19 @@ def compare_data(existing, new):
         return None
             
 
+
+def track_changes(existing_data, new_data):
+    changes = {'ISIN': new_data['ISIN']}
+    columns = ['issuer_details', 'instrument_details', 'coupon_details', 'redemption_details', 
+               'credit_ratings', 'listing_details', 'restructuring', 'default_details', 
+               'keycontacts', 'keydocuments']
+    
+    for column in columns:
+        diff = compare_data(existing_data.get(column), new_data.get(column),column)
+        if diff:
+            changes[column] = str(diff)
+    
+    return changes
 
 def insert_or_update_data(connection, data):
     cursor = None
@@ -248,7 +284,7 @@ def insert_or_update_data(connection, data):
             changes_detected = False
 
             for key in existing_relevant_data.keys():
-                diff = compare_data(existing_relevant_data[key], new_relevant_data[key])
+                diff = compare_data(existing_relevant_data[key], new_relevant_data[key],key)
                 if diff:
                     changes_detected = True
 
@@ -430,7 +466,8 @@ def fetch_all_isins_from_db(connection):
 # Main processing script
 def main():
     # Read ISINs from Excel
-    isin_file_path = r"C:\Users\Premkumar.8265\Desktop\nsdl_bond_incremental_personal\List_of_securitites_active_matured.xlsx"
+    # isin_file_path = r"C:\Users\Premkumar.8265\Desktop\nsdl_bond_incremental_personal\List_of_securitites_active_matured.xlsx"
+    isin_file_path = r"C:\Users\Premkumar.8265\Desktop\all_projects_new\nsdl_incremental_also_api_code\nsdl_bond_incremental_personal\nsdl_securities_report.xlsx"
    
     isin_df = pd.read_excel(isin_file_path)
 
@@ -440,8 +477,8 @@ def main():
         sys.exit(1)
 
     # Limit to the first 100 rows
-    # isin_df = isin_df.head(5)
-    isin_df = isin_df.iloc[1:2]
+    # isin_df = isin_df.head(2)
+    # isin_df = isin_df.iloc[1:2]
 
     # Headers for requests
     headers = {
@@ -461,6 +498,7 @@ def main():
 
     # DataFrame to store results
     results = []
+    changes_results = []
     
     try:
         for isin in isin_df['ISIN']:
@@ -514,6 +552,15 @@ def main():
 
                 # Append to results
                 results.append(result)
+
+
+                 # Fetch existing data and track changes
+                existing_data = fetch_existing_data_for_isin(connection, isin)
+                if existing_data:
+                    changes = track_changes(existing_data, result)
+                    if changes:
+                        changes['ISIN'] = isin
+                        changes_results.append(changes)
                 
                 # Insert or update the result in the MySQL database
                 insert_or_update_data(connection, result)
@@ -529,10 +576,20 @@ def main():
         result_df = pd.DataFrame(results)
 
         # Save the DataFrame to an Excel file
-        output_file_path = r"C:\Users\Premkumar.8265\Desktop\nsdl_bond_incremental_personal\List_of_securitites_active_matured_results.xlsx"
+        # output_file_path = r"C:\Users\Premkumar.8265\Desktop\nsdl_bond_incremental_personal\List_of_securitites_active_matured_results.xlsx"
+        output_file_path = r"C:\Users\Premkumar.8265\Desktop\all_projects_new\nsdl_incremental_also_api_code\nsdl_bond_incremental_personal\nsdl_isin_results.xlsx"
         result_df.to_excel(output_file_path, index=False)
         print(f"Data saved to {output_file_path}")
 
+        
+        # Create and save the changes DataFrame
+        columns = ['ISIN', 'issuer_details', 'type', 'instrument_details', 'coupon_details', 
+                   'redemption_details', 'credit_ratings', 'listing_details', 'restructuring', 
+                   'default_details', 'keycontacts', 'keydocuments']
+        changes_df = pd.DataFrame(changes_results, columns=columns)
+        changes_output_file_path = r"C:\Users\Premkumar.8265\Desktop\all_projects_new\nsdl_incremental_also_api_code\nsdl_bond_incremental_personal\updated_isin_results.xlsx"
+        changes_df.to_excel(changes_output_file_path, index=False)
+        print(f"Changes data saved to {changes_output_file_path}")
 
         # Fetch all ISINs from the database
         db_isins = fetch_all_isins_from_db(connection)
